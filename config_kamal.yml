@@ -1,0 +1,47 @@
+alerts:
+  enabled: false
+monitoring:
+  enabled: false
+proxies:
+  enabled: false
+scraper:
+  max_concurrency: 3
+  max_retries: 3
+  requests_per_minute: 60
+  run_mode: once
+  timeout_seconds: 30
+stealth:
+  enabled: true
+  randomize_fingerprint: true
+storage:
+  output_dir: /a0/usr/workdir/scrappe/data/output
+  write_csv: true
+  write_json: true
+targets:
+- extract:
+    all_text: body
+  name: cvr_vikarone
+  render_js: false
+  urls:
+  - https://cvrapi.dk/virksomhed/dk/mangfoldighed-konsulent-vkamal-atie/33913834
+- extract:
+    all_text: body
+  name: proff_vikarone
+  render_js: true
+  urls:
+  - https://www.proff.dk/firma/vikarone/vejle/pleje-og-omsorgstjenester/0K6W2YI10K7
+  wait_timeout_ms: 10000
+- extract:
+    all_text: body
+  name: ownr_kamal
+  render_js: true
+  urls:
+  - https://ownr.dk/users/public-profile/4000714815
+  wait_timeout_ms: 10000
+- extract:
+    all_text: body
+  name: the_org_kamal
+  render_js: true
+  urls:
+  - https://theorg.com/org/ok-fonden/org-chart/kamal-atie
+  wait_timeout_ms: 10000

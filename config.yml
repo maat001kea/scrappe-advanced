@@ -1,0 +1,285 @@
+scraper:
+  # Service mode:
+  # - oneshot: run configured targets once and exit
+  # - daemon: keep running and re-run targets on an interval (recommended for Docker)
+  run_mode: daemon
+  run_interval_seconds: 60
+  requests_per_minute: 600
+  max_concurrency: 20
+  max_retries: 3
+  timeout_seconds: 20
+  initial_backoff_seconds: 1.0
+  max_backoff_seconds: 20.0
+  random_delay_min_ms: 100
+  random_delay_max_ms: 700
+  # Auto-scale worker concurrency based on queue depth (within this container).
+  autoscale_enabled: false
+  autoscale_min_concurrency: 2
+  autoscale_check_interval_seconds: 5.0
+  autoscale_scale_step: 2
+  autoscale_queue_per_worker_scale_up: 25
+  autoscale_queue_per_worker_scale_down: 5
+
+proxies:
+  enabled: false
+  remove_after_failures: 5
+  min_success_rate: 0.2
+  max_latency_seconds: 15.0
+  # Proxy selection strategy:
+  # - weighted: deterministic scoring based on observed success/latency (default)
+  # - thompson: Bayesian Thompson sampling (predicts success probability & explores)
+  selection_strategy: weighted
+  # How quickly proxy latency EWMA adapts (0.1-0.3 is typical).
+  ewma_alpha: 0.2
+  # Temporary cooldown when a proxy is erroring (seconds).
+  cooldown_base_seconds: 30
+  cooldown_max_seconds: 600
+  # If a proxy fails N times in a row, it is cooled down (temporarily removed from rotation).
+  consecutive_failures_for_cooldown: 3
+  # After too many cooldowns, a proxy is permanently disabled.
+  perma_disable_after_cooldowns: 5
+  # Require some attempts before permanently disabling by success-rate.
+  min_attempts_before_disable: 5
+  # Only consider latency-based cooldown after this many successes.
+  min_successes_for_latency_check: 3
+  sources:
+    # Example file source (one proxy per line).
+    - name: local_file
+      type: file
+      path: proxies.txt
+      proxy_kind: datacenter
+      # Optional auth applied to proxies that don't include user:pass in their URL.
+      # username: your_user
+      # password: your_pass
+
+    # Example env source: export PROXY_LIST="http://user:pass@host:port,http://host2:port"
+    - name: env_list
+      type: env
+      env_var: PROXY_LIST
+      proxy_kind: residential
+
+# NEW: Automatic Free Proxy Harvesting
+proxy_harvesting:
+  enabled: false
+  # Harvest settings
+  harvest_interval_hours: 24  # How often to harvest new proxies
+  max_proxies_per_harvest: 1000  # Maximum number of proxies to collect
+  validate_proxies: true  # Validate proxies before adding to pool
+  validation_timeout: 10  # Seconds to test each proxy
+  
+  # Validation settings
+  min_success_rate: 0.5  # Minimum validation success rate to keep proxies
+  max_response_time: 10.0  # Maximum acceptable response time
+  
+  # Refresh settings
+  auto_refresh: true  # Automatically refresh proxies
+  refresh_interval_hours: 12  # How often to refresh proxy pool
+  
+  # Storage
+  save_to_file: true  # Save harvested proxies to file
+  proxy_file: data/proxies/harvested_proxies.txt
+
+# NEW: CAPTCHA Solver Configuration
+captcha_solver:
+  enabled: false
+  
+  # API-based solver settings
+  api_enabled: true
+  api_type: "2captcha"  # Options: 2captcha, anti-captcha, capmonster, deathbycaptcha
+  api_key: ""  # Your API key for CAPTCHA solving service
+  api_timeout: 120  # Maximum time to wait for solution (seconds)
+  api_poll_interval: 5  # How often to check for solution (seconds)
+  
+  # OCR-based solver settings
+  ocr_enabled: true  # Enable Tesseract OCR (fallback)
+  ocr_language: "eng"  # Language for OCR (eng, dan, fra, deu, etc.)
+  ocr_preprocess: true  # Enhance images before OCR
+  
+  # Strategy settings
+  preferred_solver: "api"  # Options: api, ocr, auto
+  fallback_to_ocr: true  # Fall back to OCR if API fails
+  max_retries: 3  # Maximum retry attempts
+  
+  # Rate limiting
+  rate_limit_per_minute: 20  # Maximum CAPTCHA solves per minute
+  
+  # Cost control (for API-based solving)
+  max_cost_per_batch: 10.0  # Maximum cost per batch (USD)
+  
+  # Integration with existing CAPTCHA detector
+  auto_solve_on_detection: true  # Automatically solve when CAPTCHA detected
+  
+# OLD CAPTCHA Detector (keep for backwards compatibility)
+captcha:
+  # Safety default: detect and fail fast instead of attempting bypass.
+  detect_only: false  # Changed to false to enable auto-solving
+  # If true, engine will retry (and rotate proxy if enabled) when a challenge is detected.
+  retry_on_detected: true
+  detection_patterns:
+    - "g-recaptcha"
+    - "hcaptcha"
+    - "captcha"
+    - "cf-chl"
+
+# NEW: Stealth/Fingerprint Spoofing Configuration
+stealth:
+  enabled: false
+  
+  # Browser fingerprint randomization
+  randomize_fingerprint: true
+  randomize_screen: true
+  randomize_timezone: true
+  randomize_language: true
+  randomize_canvas: true
+  randomize_webgl: true
+  randomize_webrtc: true
+  randomize_audio: true
+  
+  # Human-like behavior
+  human_like_mouse: true
+  human_like_typing: true
+  random_delays: true
+  
+  # Navigator property spoofing
+  spoof_hardware_concurrency: true
+  spoof_device_memory: true
+  spoof_max_touch_points: true
+  
+  # Extra protection
+  block_webgl_debug_renderer_info: true
+  block_webrtc: false  # Some sites need WebRTC
+  
+  # Playwright settings for stealth
+  headless: false  # Headless is more detectable
+  viewport_width: 1920
+  viewport_height: 1080
+  
+  # Apply to all JavaScript-rendered targets
+  apply_to_js_targets: true
+
+# NEW: Cloudflare/Bot Challenge Bypass Configuration
+cloudflare_bypass:
+  enabled: false
+  
+  # Turnstile solver settings
+  turnstile_api_key: ""  # Optional: API key for Turnstile solving
+  turnstile_timeout: 30  # Maximum time to solve Turnstile (seconds)
+  
+  # Challenge handling
+  max_wait_time: 120  # Maximum time to wait for challenge to complete (seconds)
+  poll_interval: 2.0  # How often to check if challenge is solved (seconds)
+  
+  # Retry settings
+  max_retries: 3
+  retry_delay: 5.0  # Seconds to wait between retries
+  
+  # Human simulation
+  human_like_waiting: true
+  random_mouse_movements: true
+  
+  # Cookie persistence
+  save_cookies: true
+  cookie_file: data/cookies/cf_cookies.json
+  load_cookies: true  # Load saved cookies on startup
+  
+  # Auto-bypass settings
+  auto_bypass_on_detection: true  # Automatically bypass when Cloudflare detected
+  
+headers:
+  accept_languages:
+    - "en-US,en;q=0.9"
+    - "da-DK,da;q=0.9,en;q=0.8"
+  default_accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+
+storage:
+  output_dir: data/output
+  backup_dir: data/backups
+  dedupe_state_file: data/state/dedupe.json
+  write_csv: true
+
+monitoring:
+  metrics_enabled: true
+  metrics_port: 9108
+  health_host: 0.0.0.0
+  health_port: 8080
+  log_file: logs/scraper.log
+  # NEW: CAPTCHA solver metrics
+  track_captcha_solves: true
+  track_proxy_harvests: true
+  track_stealth_usage: true
+
+targets:
+  - name: example
+    urls:
+      - "https://example.com"
+    render_js: false
+    wait_for_selector: null
+    wait_timeout_ms: 5000
+    extract:
+      title_selector: "title"
+      links_selector: "a"
+      links_attribute: "href"
+    # NEW: Per-target feature overrides
+    enable_stealth: false
+    enable_captcha_solver: false
+    enable_cloudflare_bypass: false
+
+# NEW: Database Integration
+database:
+  # Enable database storage
+  enabled: false
+  
+  # Database type: postgresql, mongodb, or both (comma-separated)
+  type: "postgresql"
+  
+  # PostgreSQL Configuration
+  postgresql:
+    host: "localhost"
+    port: 5432
+    database: "scrappe"
+    username: "scrappe_user"
+    password: ""  # Set via environment: DB_PASSWORD
+    pool_size: 10
+    max_overflow: 20
+    pool_timeout: 30
+    pool_recycle: 3600
+    ssl_mode: "prefer"
+    
+  # MongoDB Configuration
+  mongodb:
+    connection_string: "mongodb://localhost:27017/scrappe"  # Or use: mongodb://user:pass@host:port/db
+    pool_size: 10
+    max_overflow: 20
+    pool_timeout: 30
+    
+  # General database settings
+  batch_size: 100  # Batch insert size
+  batch_timeout: 5.0  # Maximum time to wait before flushing batch
+  max_retries: 3
+  retry_delay: 1.0
+  
+  # Auto-initialize schema
+  auto_initialize: true
+  auto_create_indexes: true
+
+# NEW: Advanced Extraction Configuration
+extraction:
+  # Default extraction method: css, xpath, regex, jsonpath, nlp
+  default_method: "css"
+  
+  # Validation settings
+  validate_extracted: true
+  strip_whitespace: true
+  remove_duplicates: true
+  
+  # NLP extraction settings
+  nlp:
+    enabled: true
+    similarity_threshold: 0.7
+    
+  # Table extraction
+  extract_tables: true
+  table_selector: "table"
+  
+  # Multi-field extraction
+  multi_field_enabled: true
