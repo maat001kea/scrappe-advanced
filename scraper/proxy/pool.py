@@ -28,7 +28,12 @@ class ProxyPool:
         self._cfg = config
         self._lock = asyncio.Lock()
         self._entries: Dict[str, ProxyEntry] = {}
-        self.reload()
+        # reload() must be awaited by the caller in an async context
+        # We don't call it here to avoid unawaited coroutine warnings
+
+    async def initialize(self) -> None:
+        """Initialize the proxy pool by loading proxies from sources."""
+        await self.reload()
 
     async def reload(self) -> None:
         async with self._lock:
