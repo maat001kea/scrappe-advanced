@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
-import threading
 import time
 from typing import Dict, List, Optional
 
@@ -26,12 +26,12 @@ class ProxyPool:
 
     def __init__(self, config: ProxyConfig) -> None:
         self._cfg = config
-        self._lock = threading.Lock()
+        self._lock = asyncio.Lock()
         self._entries: Dict[str, ProxyEntry] = {}
         self.reload()
 
-    def reload(self) -> None:
-        with self._lock:
+    async def reload(self) -> None:
+        async with self._lock:
             sources = build_sources(self._cfg.sources)
             new_urls: List[tuple[str, str, str]] = []
             for src_cfg, src in sources:
@@ -64,12 +64,12 @@ class ProxyPool:
     def enabled(self) -> bool:
         return bool(self._cfg.enabled)
 
-    def all(self) -> List[ProxyEntry]:
-        with self._lock:
+    async def all(self) -> List[ProxyEntry]:
+        async with self._lock:
             return list(self._entries.values())
 
-    def healthy(self) -> List[ProxyEntry]:
-        with self._lock:
+    async def healthy(self) -> List[ProxyEntry]:
+        async with self._lock:
             now = time.monotonic()
             return [
                 p
@@ -125,14 +125,14 @@ class ProxyPool:
         base = base / (1.0 + (0.50 * in_flight))
         return max(0.0001, base)
 
-    def get(self) -> Optional[ProxyEntry]:
-        return self.acquire()
+    async def get(self) -> Optional[ProxyEntry]:
+        return await self.acquire()
 
-    def acquire(self) -> Optional[ProxyEntry]:
+    async def acquire(self) -> Optional[ProxyEntry]:
         if not self._cfg.enabled:
             return None
 
-        with self._lock:
+        async with self._lock:
             now = time.monotonic()
             candidates = [
                 p
@@ -161,8 +161,8 @@ class ProxyPool:
             chosen.in_flight += 1
             return chosen
 
-    def report_success(self, proxy_url: str, latency_seconds: float) -> None:
-        with self._lock:
+    async def report_success(self, proxy_url: str, latency_seconds: float) -> None:
+        async with self._lock:
             entry = self._entries.get(proxy_url)
             if not entry:
                 return
@@ -172,8 +172,8 @@ class ProxyPool:
             entry.cooldown_level = max(0, entry.cooldown_level - 1)
             self._maybe_disable(entry)
 
-    def report_failure(self, proxy_url: str, *, reason: str = "unknown", blocked: bool = False) -> None:
-        with self._lock:
+    async def report_failure(self, proxy_url: str, *, reason: str = "unknown", blocked: bool = False) -> None:
+        async with self._lock:
             entry = self._entries.get(proxy_url)
             if not entry:
                 return
@@ -181,8 +181,8 @@ class ProxyPool:
             entry.stats.record_failure(reason=reason, blocked=blocked)
             self._maybe_disable(entry, reason=reason)
 
-    def top_summaries(self, limit: int = 10) -> List[Dict[str, object]]:
-        with self._lock:
+    async def top_summaries(self, limit: int = 10) -> List[Dict[str, object]]:
+        async with self._lock:
             now = time.monotonic()
             entries = list(self._entries.values())
             entries.sort(key=self._deterministic_score, reverse=True)

@@ -281,7 +281,7 @@ class ScraperEngine:
         proxy_url = None
         if self._proxy_pool.enabled():
             try:
-                proxy_entry = self._proxy_pool.acquire()
+                proxy_entry = await self._proxy_pool.acquire()
             except ProxyPoolEmpty as exc:
                 raise FetchAttemptError(
                     target=task.target_name,
@@ -320,7 +320,7 @@ class ScraperEngine:
             except PlaywrightTimeoutError as exc:
                 latency = time.perf_counter() - start
                 if proxy_url:
-                    self._proxy_pool.report_failure(proxy_url, reason="pw_timeout")
+                    await self._proxy_pool.report_failure(proxy_url, reason="pw_timeout")
                 raise FetchAttemptError(
                     target=task.target_name,
                     url=task.url,
@@ -336,7 +336,7 @@ class ScraperEngine:
             except Exception as exc:
                 latency = time.perf_counter() - start
                 if proxy_url:
-                    self._proxy_pool.report_failure(proxy_url, reason="pw_error")
+                    await self._proxy_pool.report_failure(proxy_url, reason="pw_error")
                 raise FetchAttemptError(
                     target=task.target_name,
                     url=task.url,
@@ -366,7 +366,7 @@ class ScraperEngine:
             except requests.exceptions.Timeout as exc:
                 latency = time.perf_counter() - start
                 if proxy_url:
-                    self._proxy_pool.report_failure(proxy_url, reason="timeout")
+                    await self._proxy_pool.report_failure(proxy_url, reason="timeout")
                 raise FetchAttemptError(
                     target=task.target_name,
                     url=task.url,
@@ -382,7 +382,7 @@ class ScraperEngine:
             except requests.exceptions.ProxyError as exc:
                 latency = time.perf_counter() - start
                 if proxy_url:
-                    self._proxy_pool.report_failure(proxy_url, reason="proxy_error")
+                    await self._proxy_pool.report_failure(proxy_url, reason="proxy_error")
                 raise FetchAttemptError(
                     target=task.target_name,
                     url=task.url,
@@ -398,7 +398,7 @@ class ScraperEngine:
             except requests.exceptions.ConnectionError as exc:
                 latency = time.perf_counter() - start
                 if proxy_url:
-                    self._proxy_pool.report_failure(proxy_url, reason="connection_error")
+                    await self._proxy_pool.report_failure(proxy_url, reason="connection_error")
                 raise FetchAttemptError(
                     target=task.target_name,
                     url=task.url,
@@ -414,7 +414,7 @@ class ScraperEngine:
             except requests.exceptions.RequestException as exc:
                 latency = time.perf_counter() - start
                 if proxy_url:
-                    self._proxy_pool.report_failure(proxy_url, reason="request_error")
+                    await self._proxy_pool.report_failure(proxy_url, reason="request_error")
                 raise FetchAttemptError(
                     target=task.target_name,
                     url=task.url,
@@ -436,7 +436,7 @@ class ScraperEngine:
         signal = self._captcha_detector.detect(html)
         if signal:
             if proxy_url:
-                self._proxy_pool.report_failure(proxy_url, reason="captcha_detected", blocked=True)
+                await self._proxy_pool.report_failure(proxy_url, reason="captcha_detected", blocked=True)
 
             artifact_path = await self._storage.write_text_artifact(
                 target=task.target_name,
@@ -466,7 +466,7 @@ class ScraperEngine:
 
         if status_code is None:
             if proxy_url:
-                self._proxy_pool.report_failure(proxy_url, reason="no_status")
+                await self._proxy_pool.report_failure(proxy_url, reason="no_status")
             raise FetchAttemptError(
                 target=task.target_name,
                 url=task.url,
@@ -484,7 +484,7 @@ class ScraperEngine:
 
         if status_code == 407:
             if proxy_url:
-                self._proxy_pool.report_failure(proxy_url, reason="proxy_auth")
+                await self._proxy_pool.report_failure(proxy_url, reason="proxy_auth")
             raise FetchAttemptError(
                 target=task.target_name,
                 url=task.url,
@@ -501,7 +501,7 @@ class ScraperEngine:
 
         if status_code == 429:
             if proxy_url:
-                self._proxy_pool.report_failure(proxy_url, reason="http_429", blocked=True)
+                await self._proxy_pool.report_failure(proxy_url, reason="http_429", blocked=True)
             raise FetchAttemptError(
                 target=task.target_name,
                 url=task.url,
@@ -519,7 +519,7 @@ class ScraperEngine:
 
         if status_code in (401, 403):
             if proxy_url:
-                self._proxy_pool.report_failure(proxy_url, reason=f"http_{status_code}", blocked=True)
+                await self._proxy_pool.report_failure(proxy_url, reason=f"http_{status_code}", blocked=True)
             raise FetchAttemptError(
                 target=task.target_name,
                 url=task.url,
@@ -536,7 +536,7 @@ class ScraperEngine:
 
         if 500 <= status_code <= 599:
             if proxy_url:
-                self._proxy_pool.report_success(proxy_url, latency)
+                await self._proxy_pool.report_success(proxy_url, latency)
             raise FetchAttemptError(
                 target=task.target_name,
                 url=task.url,
@@ -553,7 +553,7 @@ class ScraperEngine:
 
         if 400 <= status_code <= 499:
             if proxy_url:
-                self._proxy_pool.report_success(proxy_url, latency)
+                await self._proxy_pool.report_success(proxy_url, latency)
             raise FetchAttemptError(
                 target=task.target_name,
                 url=task.url,
@@ -569,7 +569,7 @@ class ScraperEngine:
             )
 
         if proxy_url:
-            self._proxy_pool.report_success(proxy_url, latency)
+            await self._proxy_pool.report_success(proxy_url, latency)
 
         extracted = extract_basic(html, target_cfg.extract)
         extracted["final_url"] = final_url
