@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional
+from typing import Awaitable, Callable, Dict, Optional
 
 from aiohttp import web
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -15,7 +15,7 @@ class MonitoringServer:
     metrics_enabled: bool
 
     # A callable that returns a dict with basic runtime status.
-    status_provider: Callable[[], Dict[str, object]]
+    status_provider: Callable[[], Awaitable[Dict[str, object]]]
 
     _health_runner: Optional[web.AppRunner] = None
     _metrics_runner: Optional[web.AppRunner] = None
@@ -56,7 +56,7 @@ class MonitoringServer:
             self._health_runner = None
 
     async def _health(self, request: web.Request) -> web.Response:
-        payload = {"ok": True, **(self.status_provider() or {})}
+        payload = {"ok": True, **(await self.status_provider() or {})}
         return web.json_response(payload)
 
     async def _metrics(self, request: web.Request) -> web.Response:

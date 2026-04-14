@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any
 from enum import Enum
-import threading
+import asyncio
 import time
 
 
@@ -76,7 +76,7 @@ class ProxyEntry:
     
     # Cooldown state
     _cooldown_until: Optional[float] = None
-    _lock: threading.Lock = field(default_factory=threading.Lock)
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     
     def get_latency(self) -> float:
         """Get EWMA latency estimate"""

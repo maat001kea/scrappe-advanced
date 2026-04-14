@@ -109,13 +109,8 @@ PROXY_SOURCES = [
 ]
 
 
-# Test websites to verify proxy functionality
-PROXY_TEST_URLS = [
-    "http://httpbin.org/ip",
-    "https://api.ipify.org",
-    "http://icanhazip.com",
-    "https://ifconfig.me/ip"
-]
+# Test websites to verify proxy functionality (configurable via ProxyHarvesterConfig)
+# Default URLs are defined in config.py
 
 
 @dataclass
@@ -471,13 +466,20 @@ class ProxyHarvester:
             # Prepare proxy URL
             proxy_url = f"{proxy.proxy_type}://{proxy.ip}:{proxy.port}"
             
-            # Test with multiple URLs
-            for test_url in PROXY_TEST_URLS:
+            # Test with configurable URLs from config
+            test_urls = self.config.test_urls if hasattr(self.config, 'test_urls') and self.config.test_urls else [
+                "http://httpbin.org/ip",
+                "https://api.ipify.org",
+                "http://icanhazip.com",
+                "https://ifconfig.me/ip"
+            ]
+            
+            for test_url in test_urls:
                 try:
                     async with self._test_client.get(
                         test_url,
                         proxy=proxy_url,
-                        timeout=aiohttp.ClientTimeout(total=10)
+                        timeout=aiohttp.ClientTimeout(total=self.config.validation_timeout)
                     ) as response:
                         if response.status == 200:
                             external_ip = await response.text()

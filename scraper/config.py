@@ -242,6 +242,8 @@ def load_config(path: str | Path) -> AppConfig:
 # Alias for backward compatibility
 Config = AppConfig
 
+
+@dataclass(slots=True)
 class ProxyHarvesterConfig:
     """Configuration for proxy harvesting"""
     enabled: bool = False
@@ -249,9 +251,16 @@ class ProxyHarvesterConfig:
     max_proxies_per_harvest: int = 1000
     validate_proxies: bool = True
     validation_timeout: int = 10
+    request_timeout: int = 30
     min_success_rate: float = 0.5
     max_response_time: float = 10.0
     auto_refresh: bool = True
     refresh_interval_hours: int = 12
     save_to_file: bool = True
     proxy_file: str = "data/proxies/harvested_proxies.txt"
+    test_urls: List[str] = field(default_factory=lambda: [
+        "http://httpbin.org/ip",
+        "https://api.ipify.org",
+        "http://icanhazip.com",
+        "https://ifconfig.me/ip"
+    ])

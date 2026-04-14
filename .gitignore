@@ -1,0 +1,14 @@
+```gitignore
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Compiled Python files
+*.cpython-*.pyc
+*.pyc.*
+
+# Test cache
+.pytest_cache/
+```

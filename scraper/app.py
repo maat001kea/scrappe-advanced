@@ -65,10 +65,10 @@ async def main() -> None:
         metrics=metrics,
     )
 
-    def status_provider() -> dict[str, object]:
+    async def status_provider() -> dict[str, object]:
         snap = engine.status_snapshot()
-        proxies_total = len(proxy_pool.all())
-        proxies_healthy = len(proxy_pool.healthy())
+        proxies_total = len(await proxy_pool.all())
+        proxies_healthy = len(await proxy_pool.healthy())
 
         metrics.set_proxy_counts(proxies_total, proxies_healthy)
         metrics.set_engine_status(
@@ -85,7 +85,7 @@ async def main() -> None:
             "proxies_total": proxies_total,
             "proxies_healthy": proxies_healthy,
             "proxies_strategy": proxy_pool.selection_strategy(),
-            "proxies_top": proxy_pool.top_summaries(limit=10),
+            "proxies_top": await proxy_pool.top_summaries(limit=10),
             "recent_errors": engine.recent_errors(limit=20),
             "user_agents": ua_pool.size(),
         }
